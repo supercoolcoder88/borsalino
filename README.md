@@ -1,7 +1,6 @@
 # borsalino
 
 # Todo
-- TCP listener
 - Parse request line
 - Parse headers
 - Support Content-Length
@@ -10,3 +9,6 @@
 - Add keep-alive
 - Add routing or handler callbacks
 - Test it inside Ohara
+
+# Done
+- TCP listener
