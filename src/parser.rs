@@ -25,12 +25,13 @@ impl FromStr for HttpMethod {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ParseError {
     Line,
     Method,
     Path,
     Version,
+    Header,
 }
 
 impl fmt::Display for ParseError {
@@ -40,6 +41,7 @@ impl fmt::Display for ParseError {
             ParseError::Method => write!(f, "invalid method"),
             ParseError::Path => write!(f, "invalid path"),
             ParseError::Version => write!(f, "invalid version"),
+            ParseError::Header => write!(f, "invalid header"),
         }
     }
 }
@@ -63,4 +65,46 @@ pub fn parse_request_line(line: &str) -> Result<(HttpMethod, String), ParseError
     }
 
     Ok((method, path.to_string()))
+}
+
+pub fn parse_header_line(line: &str) -> Result<(String, String), ParseError> {
+    let line = line.trim();
+
+    let colon = line.find(':').ok_or(ParseError::Header)?;
+    Ok((
+        line[..colon].to_owned(),
+        line[colon + 1..].trim().to_owned(),
+    ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn success_parse_request_line() {
+        let (method, path) = parse_request_line("POST /users HTTP/1.1\r\n").unwrap();
+        assert_eq!(method, HttpMethod::Post);
+        assert_eq!(path, "/users");
+    }
+
+    #[test]
+    fn error_bad_method_parse_request_line() {
+        let error = parse_request_line("badMeth0D /users HTTP/1.1\r\n").unwrap_err();
+        assert_eq!(error, ParseError::Method);
+    }
+
+    #[test]
+    fn success_parse_header_line() {
+        let (header_name, header_val) =
+            parse_header_line("   cool-HeadER123: value12:123").unwrap();
+        assert_eq!(header_name, "cool-HeadER123");
+        assert_eq!(header_val, "value12:123");
+    }
+
+    #[test]
+    fn error_no_colon_parse_header_line() {
+        let error = parse_header_line("  header123 value").unwrap_err();
+        assert_eq!(error, ParseError::Header);
+    }
 }

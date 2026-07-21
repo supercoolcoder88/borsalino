@@ -44,7 +44,9 @@ pub fn listen_at(addr: String) {
 
         match handle_client(stream) {
             Ok(_) => continue,
-            Err(_) => eprintln!("error found "),
+            Err(error) => {
+                eprintln!("error found {error}");
+            }
         }
     }
 }
@@ -62,8 +64,16 @@ fn handle_client(mut stream: TcpStream) -> Result<(), RequestError> {
 
     // TODO: Remove logs
     let (method, path) = parser::parse_request_line(request_line)?;
-    println!("method: {:?}\npath: {path}", method);
-
+    println!("method{:?}, path: {path}", method);
+    for line in read_lines {
+        // assuming that the first \r\n is end of header lines
+        if line.is_empty() {
+            break;
+        }
+        let (header_title, header_val) = parser::parse_header_line(line)?;
+        println!("title: {header_title}\n val: {header_val}");
+    }
+    // Write response
     let response = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nOK";
     stream.write_all(response.as_bytes())?;
     stream.flush()?;
