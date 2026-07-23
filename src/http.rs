@@ -6,6 +6,7 @@ use std::{
     fmt,
     io::{self, Read, Write},
     net::{TcpListener, TcpStream},
+    vec,
 };
 
 #[derive(Default)]
@@ -62,8 +63,7 @@ impl Router {
             }
         }
 
-        // TODO: Write response
-
+        // write response
         let mut writer = ResponseWriter::new();
 
         match self.routes.get(&(method, path)) {
@@ -90,19 +90,74 @@ impl Router {
     }
 }
 
+pub enum HttpStatus {
+    Ok,
+    BadRequest,
+    NotFound,
+    InternalServerError,
+}
+
+impl HttpStatus {
+    pub fn for_response_writer(&self) -> &'static str {
+        match self {
+            HttpStatus::Ok => "HTTP/1.1 200 OK",
+            HttpStatus::BadRequest => "HTTP/1.1 400 Bad Request",
+            HttpStatus::NotFound => "HTTP/1.1 404 Not Found",
+            HttpStatus::InternalServerError => "HTTP/1.1 500 Internal Server Error",
+        }
+    }
+
+    pub fn default_msg(&self) -> &'static str {
+        match self {
+            HttpStatus::Ok => "should not be an error",
+            HttpStatus::BadRequest => "Bad Request",
+            HttpStatus::NotFound => "Not Found",
+            HttpStatus::InternalServerError => "Internal Server Error",
+        }
+    }
+}
+
 pub struct ResponseWriter {
-    write_buffer: [u8; 1024],
+    write_buffer: Vec<u8>,
 }
 
 impl ResponseWriter {
     fn new() -> Self {
         Self {
-            write_buffer: [0; 1024],
+            write_buffer: Vec::new(),
         }
     }
 
-    pub fn write(&mut self, res: &str) {
-        self.write_buffer[0..res.len()].copy_from_slice(res.as_bytes());
+    fn write(&mut self, res: &str) {
+        self.write_buffer.extend_from_slice(res.as_bytes());
+    }
+
+    pub fn ok(&mut self, body: &str) {
+        // writing ok
+        self.write_buffer
+            .extend_from_slice(HttpStatus::Ok.for_response_writer().as_bytes());
+
+        // writing content length
+        let content_length = format!("Content-Length: {}\r\n\r\n", body.len());
+        self.write_buffer
+            .extend_from_slice(content_length.as_bytes());
+
+        // writing body
+        self.write_buffer.extend_from_slice(body.as_bytes());
+    }
+
+    pub fn error(&mut self, status: HttpStatus, body: &str) {
+        // writing ok
+        self.write_buffer
+            .extend_from_slice(status.for_response_writer().as_bytes());
+
+        // writing content length
+        let content_length = format!("Content-Length: {}\r\n\r\n", body.len());
+        self.write_buffer
+            .extend_from_slice(content_length.as_bytes());
+
+        // writing body
+        self.write_buffer.extend_from_slice(body.as_bytes());
     }
 }
 
