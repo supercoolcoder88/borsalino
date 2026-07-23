@@ -1,48 +1,30 @@
-use std::str::FromStr;
+use crate::http_method::{HttpMethod, InvalidMethod};
 use std::{error::Error, fmt};
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum HttpMethod {
-    Get,
-    Post,
-    Patch,
-    Delete,
-    Query,
-}
-
-impl FromStr for HttpMethod {
-    type Err = ParseError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "GET" => Ok(HttpMethod::Get),
-            "POST" => Ok(HttpMethod::Post),
-            "PATCH" => Ok(HttpMethod::Patch),
-            "DELETE" => Ok(HttpMethod::Delete),
-            "QUERY" => Ok(HttpMethod::Query),
-            _ => Err(ParseError::Method),
-        }
-    }
-}
 
 #[derive(Debug, PartialEq)]
 pub enum ParseError {
     Line,
-    Method,
     Path,
     Version,
     Header,
+    Method,
 }
 
 impl fmt::Display for ParseError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ParseError::Line => write!(f, "invalid line"),
-            ParseError::Method => write!(f, "invalid method"),
             ParseError::Path => write!(f, "invalid path"),
             ParseError::Version => write!(f, "invalid version"),
             ParseError::Header => write!(f, "invalid header"),
+            ParseError::Method => write!(f, "invalid method"),
         }
+    }
+}
+
+impl From<InvalidMethod> for ParseError {
+    fn from(_value: InvalidMethod) -> Self {
+        ParseError::Method
     }
 }
 
@@ -53,7 +35,7 @@ pub fn parse_request_line(line: &str) -> Result<(HttpMethod, String), ParseError
 
     let mut parts = line.split_whitespace();
 
-    let method: HttpMethod = parts.next().ok_or(ParseError::Line)?.parse()?;
+    let method: HttpMethod = parts.next().ok_or(InvalidMethod)?.parse()?;
 
     let path = parts.next().ok_or(ParseError::Path)?;
 
