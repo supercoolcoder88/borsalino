@@ -48,14 +48,14 @@ impl Router {
 
         let mut _content_length = 0;
 
-        for line in read_lines {
+        for line in read_lines.by_ref() {
             // assuming that the first \r\n is end of header lines
             if line.is_empty() {
                 break;
             }
             let (header_title, header_val) = parser::parse_header_line(line)?;
 
-            if header_title == "Content-Length" {
+            if header_title.eq_ignore_ascii_case("Content-Length") {
                 match header_val.parse::<usize>() {
                     Ok(val) => _content_length = val,
                     Err(error) => return Err(RequestError::General(error.to_string())),
@@ -63,6 +63,7 @@ impl Router {
             }
         }
 
+        // parse request body
         // write response
         let mut writer = ResponseWriter::new();
 
@@ -134,30 +135,23 @@ impl ResponseWriter {
 
     pub fn ok(&mut self, body: &str) {
         // writing ok
-        self.write_buffer
-            .extend_from_slice(HttpStatus::Ok.for_response_writer().as_bytes());
-
+        self.write(HttpStatus::Ok.for_response_writer());
         // writing content length
         let content_length = format!("Content-Length: {}\r\n\r\n", body.len());
-        self.write_buffer
-            .extend_from_slice(content_length.as_bytes());
+        self.write(content_length.as_str());
 
         // writing body
-        self.write_buffer.extend_from_slice(body.as_bytes());
+        self.write(body);
     }
 
     pub fn error(&mut self, status: HttpStatus, body: &str) {
-        // writing ok
-        self.write_buffer
-            .extend_from_slice(status.for_response_writer().as_bytes());
-
+        self.write(status.for_response_writer());
         // writing content length
         let content_length = format!("Content-Length: {}\r\n\r\n", body.len());
-        self.write_buffer
-            .extend_from_slice(content_length.as_bytes());
+        self.write(content_length.as_str());
 
         // writing body
-        self.write_buffer.extend_from_slice(body.as_bytes());
+        self.write(body);
     }
 }
 

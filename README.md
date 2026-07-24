@@ -1,7 +1,6 @@
 # borsalino
 
 # Todo
-- More ergonimic response writing
 - Parse body
 - Ensure to handle errors
 - function comments
@@ -19,3 +18,4 @@
 - Parse headers
 - Support Content-Length
 - Add routing or handler callbacks
+- More ergonimic response writing
